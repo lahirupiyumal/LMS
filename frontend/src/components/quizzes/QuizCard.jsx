@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import theme from '../theme';
 
 const LOCAL_BACKEND_PORTS = [8070, 8071, 8072, 8073, 8074, 8075];
 
@@ -194,215 +193,141 @@ const Quits = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: `linear-gradient(145deg, ${theme.givry} 0%, #ffffff 55%, ${theme.givry} 100%)`,
-        padding: '28px 16px',
-        fontFamily: 'Inter, system-ui, Arial'
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1040,
-          margin: '0 auto',
-          background: '#fff',
-          borderRadius: 18,
-          border: `1px solid ${theme.givry}`,
-          boxShadow: '0 14px 40px rgba(5,54,104,0.12)',
-          padding: 24
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+    <div className="min-h-screen bg-gradient-to-br from-brand-soft via-white to-brand-soft px-4 py-8">
+      <div className="mx-auto w-full max-w-5xl rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 style={{ margin: 0, color: theme.teal, fontSize: 30, letterSpacing: 0.2 }}>Quizzes</h2>
-            <p style={{ margin: '6px 0 0', color: '#6b7280', fontWeight: 600 }}>{quizName}</p>
+            <h2 className="text-3xl font-bold tracking-tight text-brand-primary">Quizzes</h2>
+            <p className="mt-1 text-sm font-medium text-slate-600">{quizName}</p>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => navigate(-1)}
-              style={{
-                padding: '10px 14px',
-                borderRadius: 10,
-                border: `1px solid ${theme.teal}`,
-                background: '#fff',
-                color: theme.teal,
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              Back
-            </button>
-          </div>
+          <button
+            onClick={() => navigate(-1)}
+            className="rounded-lg border border-brand-primary bg-white px-4 py-2 text-sm font-semibold text-brand-primary transition hover:bg-slate-50"
+          >
+            Back
+          </button>
         </div>
 
-        {loading && <p style={{ color: '#6b7280', fontWeight: 600 }}>Loading quizzes...</p>}
+        {loading && <p className="text-sm font-medium text-slate-600">Loading quizzes...</p>}
         {error && (
-          <p style={{ color: '#b91c1c', background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 10, padding: '10px 12px', fontWeight: 600 }}>
+          <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
             {error}
           </p>
         )}
-        {!loading && !error && questions.length === 0 && <p style={{ color: '#6b7280' }}>No quizzes available.</p>}
+        {!loading && !error && questions.length === 0 && <p className="text-sm text-slate-600">No quizzes available.</p>}
 
         {questions.length > 0 && (
-          <div style={{ display: 'grid', gap: 14 }}>
-            <div style={{ color: '#6b7280', fontSize: 14, fontWeight: 700 }}>
-              Showing {questions.length}/10 quizzes
-            </div>
+          <div className="grid gap-4">
+            <div className="text-sm font-semibold text-slate-600">Showing {questions.length}/10 quizzes</div>
 
-          {showResult && score && (
-            <div
-              style={{
-                padding: 24,
-                borderRadius: 14,
-                background: '#fff',
-                border: `1px solid ${theme.givry}`,
-                boxShadow: '0 10px 30px rgba(15,23,42,0.12)',
-                textAlign: 'center',
-                marginBottom: 8
-              }}
-            >
-              <h2 style={{ margin: '0 0 16px 0', fontSize: 32, color: theme.teal }}>My Result</h2>
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', marginBottom: 8 }}>
-                  Correct answers: {score.correct} / {score.total}
+            {showResult && score && (
+              <div className="mb-2 rounded-xl border border-slate-200 bg-slate-50 p-6 text-center shadow-sm">
+                <h2 className="mb-4 text-3xl font-bold text-brand-primary">My Result</h2>
+                <div className="mb-6">
+                  <div className="mb-2 text-lg font-semibold text-slate-900">
+                    Correct answers: {score.correct} / {score.total}
+                  </div>
+                  <div className={`text-4xl font-bold ${score.percent >= 60 ? 'text-emerald-600' : 'text-amber-500'}`}>
+                    {score.percent}%
+                  </div>
                 </div>
-                <div style={{ fontSize: 42, fontWeight: 700, color: score.percent >= 60 ? '#10b981' : '#f59e0b' }}>
-                  {score.percent}%
-                </div>
+
+                {score.percent >= 60 ? (
+                  <button
+                    onClick={downloadCertificate}
+                    className="mr-2 rounded-lg bg-brand-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-accent/90"
+                  >
+                    Download Certificate
+                  </button>
+                ) : (
+                  <p className="mb-3 text-sm text-slate-600">Get at least 60% to download certificate.</p>
+                )}
+
+                <button
+                  onClick={() => setShowResult(false)}
+                  className="rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary/90"
+                >
+                  Close
+                </button>
               </div>
+            )}
 
-              {score.percent >= 60 ? (
-                <button onClick={downloadCertificate} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: theme.blaze, color: '#fff', fontWeight: 700, cursor: 'pointer', marginRight: 8 }}>
-                  Download Certificate
+            {questions.map((q, index) => {
+              const questionId = index + 1;
+              return (
+                <div
+                  key={questionId}
+                  className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="mb-3 font-semibold leading-relaxed text-brand-primary">
+                    Q{questionId}. {q.questionText}
+                  </div>
+
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    {q.options.map((opt, idx) => {
+                      const selected = answers[questionId];
+                      const isChosen = selected && selected.text === opt.text;
+                      let optionClass = 'border-slate-200 bg-white text-slate-900';
+
+                      if (isChosen) {
+                        optionClass = 'border-blue-300 bg-blue-50 text-blue-900';
+                      }
+
+                      if (submitted) {
+                        if (opt.isCorrect) {
+                          optionClass = 'border-emerald-600 bg-emerald-50 text-emerald-800';
+                        } else if (isChosen && !opt.isCorrect) {
+                          optionClass = 'border-rose-600 bg-rose-50 text-rose-800';
+                        }
+                      }
+
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => selectOption(questionId, opt)}
+                          disabled={submitted}
+                          className={`rounded-lg border px-3 py-2.5 text-left text-sm font-medium transition ${optionClass} ${submitted ? 'cursor-default' : 'hover:border-brand-primary/60 hover:bg-slate-50'}`}
+                        >
+                          {opt.text}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {submitted && answers[questionId] && (
+                    <p className={`mt-2 text-sm font-semibold ${answers[questionId].isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      {answers[questionId].isCorrect ? 'Correct answer' : 'Incorrect answer'}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className="mt-1 flex justify-end gap-2">
+              <button
+                onClick={resetAll}
+                className="rounded-lg border border-brand-primary bg-white px-4 py-2 text-sm font-semibold text-brand-primary transition hover:bg-slate-50"
+              >
+                Reset
+              </button>
+              {!submitted ? (
+                <button
+                  onClick={handleSubmit}
+                  className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary/90"
+                >
+                  Submit
                 </button>
               ) : (
-                <p style={{ color: '#6b7280', marginBottom: 12 }}>Get at least 60% to download certificate.</p>
+                <button
+                  onClick={() => setShowResult(true)}
+                  className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary/90"
+                >
+                  View my result
+                </button>
               )}
-
-              <button onClick={() => setShowResult(false)} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: theme.teal, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Close</button>
             </div>
-          )}
-
-          {questions.map((q, index) => {
-            const questionId = index + 1;
-            return (
-              <div
-                key={questionId}
-                style={{
-                  padding: 18,
-                  borderRadius: 12,
-                  background: '#ffffff',
-                  border: `1px solid ${theme.givry}`,
-                  boxShadow: '0 8px 24px rgba(15,23,42,0.06)'
-                }}
-              >
-                <div style={{ marginBottom: 12, fontWeight: 700, color: theme.teal, lineHeight: 1.45 }}>
-                  Q{questionId}. {q.questionText}
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-                  {q.options.map((opt, idx) => {
-                    const selected = answers[questionId];
-                    const isChosen = selected && selected.text === opt.text;
-                    let background = isChosen ? '#e7f0ff' : '#fff';
-                    let borderColor = isChosen ? '#93c5fd' : '#e5e7eb';
-                    let color = '#111827';
-
-                    if (submitted) {
-                      if (opt.isCorrect) {
-                        background = '#dcfce7';
-                        borderColor = '#16a34a';
-                        color = '#166534';
-                      } else if (isChosen && !opt.isCorrect) {
-                        background = '#fee2e2';
-                        borderColor = '#dc2626';
-                        color = '#991b1b';
-                      }
-                    }
-
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => selectOption(questionId, opt)}
-                        disabled={submitted}
-                        style={{
-                          padding: '11px 12px',
-                          borderRadius: 10,
-                          border: `1px solid ${borderColor}`,
-                          background,
-                          color,
-                          cursor: submitted ? 'default' : 'pointer',
-                          textAlign: 'left',
-                          fontWeight: 600
-                        }}
-                      >
-                        {opt.text}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {submitted && answers[questionId] && (
-                  <p style={{ marginTop: 8, fontWeight: 700, color: answers[questionId].isCorrect ? '#166534' : '#991b1b' }}>
-                    {answers[questionId].isCorrect ? 'Correct answer' : 'Incorrect answer'}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
-            <button
-              onClick={resetAll}
-              style={{
-                padding: '10px 14px',
-                borderRadius: 10,
-                border: `1px solid ${theme.teal}`,
-                background: '#fff',
-                color: theme.teal,
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              Reset
-            </button>
-            {!submitted ? (
-              <button
-                onClick={handleSubmit}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: 10,
-                  border: 'none',
-                  background: theme.teal,
-                  color: '#fff',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 8px 20px rgba(5,54,104,0.25)'
-                }}
-              >
-                Submit
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowResult(true)}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: 10,
-                  border: 'none',
-                  background: theme.teal,
-                  color: '#fff',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 8px 20px rgba(5,54,104,0.25)'
-                }}
-              >
-                View my result
-              </button>
-            )}
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );
