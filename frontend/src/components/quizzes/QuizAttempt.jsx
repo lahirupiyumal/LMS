@@ -28,10 +28,17 @@ const AddSummary = () => {
   const [summary, setSummary] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const trimmedSummary = summary.trim();
+  const wordCount = trimmedSummary ? trimmedSummary.split(/\s+/).length : 0;
 
   const handleGenerate = async () => {
-    if (!summary.trim()) {
+    if (!trimmedSummary) {
       setError('Please enter a summary first.');
+      return;
+    }
+
+    if (wordCount < 30) {
+      setError('Please provide a slightly longer summary (at least 30 words) for better quiz quality.');
       return;
     }
 
@@ -39,7 +46,7 @@ const AddSummary = () => {
       setLoading(true);
       setError('');
       const response = await postWithBackendFallback('/quiz/from-summary', {
-        summary: summary.trim(),
+        summary: trimmedSummary,
       });
       navigate(`/quiz/${response.data._id}/quits`);
     } catch (err) {
@@ -72,6 +79,10 @@ const AddSummary = () => {
             placeholder="Paste the summary text here..."
             className="w-full resize-y rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
           />
+          <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+            <span>{wordCount} words</span>
+            <span>10 questions will be generated. Pass mark: 60%</span>
+          </div>
         </div>
 
         {error && (
@@ -83,7 +94,7 @@ const AddSummary = () => {
         <div className="mt-5 flex flex-wrap gap-3">
           <button
             onClick={handleGenerate}
-            disabled={loading}
+            disabled={loading || !trimmedSummary}
             className="rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {loading ? 'Generating...' : 'Generate 10 Quiz'}

@@ -17,6 +17,39 @@ const questionSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const attemptQuestionSchema = new mongoose.Schema(
+  {
+    questionText: { type: String, required: true },
+    options: { type: [optionSchema], required: true },
+    correctAnswer: { type: String, required: true },
+    selectedAnswer: { type: String, default: '' },
+    isCorrect: { type: Boolean, default: false }
+  },
+  { _id: false }
+);
+
+const attemptSchema = new mongoose.Schema(
+  {
+    summary: { type: String, required: true },
+    questions: {
+      type: [attemptQuestionSchema],
+      validate: {
+        validator: function (value) {
+          return Array.isArray(value) && value.length === 10;
+        },
+        message: 'Each attempt must store exactly 10 questions.'
+      }
+    },
+    totalQuestions: { type: Number, required: true },
+    correctAnswers: { type: Number, required: true },
+    scorePercentage: { type: Number, required: true },
+    passed: { type: Boolean, required: true },
+    certificateGenerated: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
+  },
+  { _id: false }
+);
+
 const quizSchema = new mongoose.Schema({
   summary: {
     type: String,
@@ -40,6 +73,10 @@ const quizSchema = new mongoose.Schema({
   uploadedAt: {
     type: Date,
     default: Date.now
+  },
+  attempts: {
+    type: [attemptSchema],
+    default: []
   }
 });
 

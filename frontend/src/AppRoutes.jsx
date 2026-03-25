@@ -5,6 +5,8 @@ import HomePage from "./pages/HomePage";
 import Materials from "./pages/materials/Materials";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
 import useAuth from "./hooks/useAuth";
+import QuizAttempt from "./components/quizzes/QuizAttempt";
+import QuizCard from "./components/quizzes/QuizCard";
 
 const PageShell = ({ title, description, children }) => (
   <main className="min-h-screen bg-slate-50 px-6 pt-28 pb-14">
@@ -177,24 +179,6 @@ const CoursesPage = () => (
   />
 );
 
-const QuizesPage = () => (
-  <PageShell
-    title="Quizes"
-    description="Attempt quizzes, review your scores, and track your progress."
-  />
-);
-
-const QuizAttemptPage = () => {
-  const { id } = useParams();
-
-  return (
-    <PageShell
-      title={`Quizes - Quiz ${id}`}
-      description="Attempt quizzes, review your scores, and track your progress."
-    />
-  );
-};
-
 const NotificationsPage = () => (
   <PageShell
     title="Notifications"
@@ -228,12 +212,20 @@ const AppRoutes = () => {
         path="/quiz/:id/quits"
         element={
           <ProtectedRoute>
-            <QuizAttemptPage />
+            <QuizCard />
           </ProtectedRoute>
         }
       />
-      <Route path="/quizes" element={<Navigate to="/quiz/1/quits" replace />} />
-      <Route path="/quizzes" element={<Navigate to="/quiz/1/quits" replace />} />
+      <Route
+        path="/add-summary"
+        element={
+          <ProtectedRoute>
+            <QuizAttempt />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/quizes" element={<Navigate to="/quizzes" replace />} />
+      <Route path="/quizzes" element={<Navigate to="/add-summary" replace />} />
       <Route path="/community" element={<CommunityPage />} />
       <Route path="/notifications" element={<NotificationsPage />} />
       <Route

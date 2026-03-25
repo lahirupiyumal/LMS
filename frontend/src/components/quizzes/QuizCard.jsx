@@ -23,6 +23,23 @@ async function getWithBackendFallback(path) {
   throw lastNetworkError || new Error('Backend not reachable');
 }
 
+async function postWithBackendFallback(path, payload) {
+  let lastNetworkError = null;
+
+  for (const port of LOCAL_BACKEND_PORTS) {
+    try {
+      return await axios.post(createBackendUrl(port, path), payload, { timeout: 5000 });
+    } catch (err) {
+      if (err.response) {
+        throw err;
+      }
+      lastNetworkError = err;
+    }
+  }
+
+  throw lastNetworkError || new Error('Backend not reachable');
+}
+
 const Quits = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -36,6 +53,9 @@ const Quits = () => {
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(null);
   const [showResult, setShowResult] = useState(false);
+  const [evaluation, setEvaluation] = useState({});
+  const [certificateMeta, setCertificateMeta] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     async function fetchQuestions() {
@@ -55,12 +75,12 @@ const Quits = () => {
     fetchQuestions();
   }, [id]);
 
-  const selectOption = (qId, option) => {
+  const selectOption = (qId, optionText) => {
     if (submitted) return;
-    setAnswers((prev) => ({ ...prev, [qId]: option }));
+    setAnswers((prev) => ({ ...prev, [qId]: optionText }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!questions.length) return;
 
     const answeredCount = Object.keys(answers).length;
@@ -69,19 +89,46 @@ const Quits = () => {
       return;
     }
 
-    let correct = 0;
-    questions.forEach((q, index) => {
-      const selected = answers[index + 1];
-      if (selected && selected.isCorrect) {
-        correct += 1;
-      }
-    });
+    try {
+      setSubmitting(true);
+      setError('');
 
-    const total = questions.length;
-    const percent = Math.round((correct / total) * 100);
-    setScore({ correct, total, percent });
-    setSubmitted(true);
-    setShowResult(false);
+      const payload = {
+        answers: questions.map((_, index) => ({
+          questionNumber: index + 1,
+          selectedAnswer: answers[index + 1] || '',
+        })),
+      };
+
+      const response = await postWithBackendFallback(`/quiz/${id}/attempt`, payload);
+      const attempt = response.data?.attempt;
+      const evaluationRows = Array.isArray(response.data?.evaluation) ? response.data.evaluation : [];
+
+      const evaluationMap = {};
+      evaluationRows.forEach((row) => {
+        evaluationMap[row.questionNumber] = row;
+      });
+
+      setEvaluation(evaluationMap);
+      setScore({
+        correct: attempt?.correctAnswers ?? 0,
+        total: attempt?.totalQuestions ?? questions.length,
+        percent: attempt?.scorePercentage ?? 0,
+      });
+      setCertificateMeta(response.data?.certificate || null);
+      setSubmitted(true);
+      setShowResult(false);
+    } catch (err) {
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.request) {
+        setError('Cannot reach backend server. Please start backend and try again.');
+      } else {
+        setError('Failed to submit quiz attempt.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const resetAll = () => {
@@ -89,6 +136,9 @@ const Quits = () => {
     setSubmitted(false);
     setScore(null);
     setShowResult(false);
+    setEvaluation({});
+    setCertificateMeta(null);
+    setError('');
   };
 
   const downloadCertificate = () => {
@@ -100,7 +150,7 @@ const Quits = () => {
     const ctx = canvas.getContext('2d');
     const today = new Date();
     const formattedDate = today.toLocaleDateString();
-    const certId = `CERT-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}-${String(id || '').slice(-6).toUpperCase() || '000001'}`;
+    const certId = certificateMeta?.certificateId || `CERT-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}-${String(id || '').slice(-6).toUpperCase() || '000001'}`;
 
     const w = canvas.width;
     const h = canvas.height;
@@ -265,8 +315,9 @@ const Quits = () => {
 
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     {q.options.map((opt, idx) => {
-                      const selected = answers[questionId];
-                      const isChosen = selected && selected.text === opt.text;
+                      const selected = answers[questionId] || '';
+                      const isChosen = selected === opt.text;
+                      const questionEvaluation = evaluation[questionId];
                       let optionClass = 'border-slate-200 bg-white text-slate-900';
 
                       if (isChosen) {
@@ -274,9 +325,9 @@ const Quits = () => {
                       }
 
                       if (submitted) {
-                        if (opt.isCorrect) {
+                        if (questionEvaluation?.correctAnswer === opt.text) {
                           optionClass = 'border-emerald-600 bg-emerald-50 text-emerald-800';
-                        } else if (isChosen && !opt.isCorrect) {
+                        } else if (isChosen && !questionEvaluation?.isCorrect) {
                           optionClass = 'border-rose-600 bg-rose-50 text-rose-800';
                         }
                       }
@@ -284,7 +335,7 @@ const Quits = () => {
                       return (
                         <button
                           key={idx}
-                          onClick={() => selectOption(questionId, opt)}
+                          onClick={() => selectOption(questionId, opt.text)}
                           disabled={submitted}
                           className={`rounded-lg border px-3 py-2.5 text-left text-sm font-medium transition ${optionClass} ${submitted ? 'cursor-default' : 'hover:border-brand-primary/60 hover:bg-slate-50'}`}
                         >
@@ -294,10 +345,15 @@ const Quits = () => {
                     })}
                   </div>
 
-                  {submitted && answers[questionId] && (
-                    <p className={`mt-2 text-sm font-semibold ${answers[questionId].isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
-                      {answers[questionId].isCorrect ? 'Correct answer' : 'Incorrect answer'}
-                    </p>
+                  {submitted && evaluation[questionId] && (
+                    <div className="mt-2 space-y-1">
+                      <p className={`text-sm font-semibold ${evaluation[questionId].isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        {evaluation[questionId].isCorrect ? 'Correct answer' : 'Incorrect answer'}
+                      </p>
+                      {!evaluation[questionId].isCorrect && (
+                        <p className="text-sm text-slate-700">Correct option: {evaluation[questionId].correctAnswer}</p>
+                      )}
+                    </div>
                   )}
                 </div>
               );
@@ -313,9 +369,10 @@ const Quits = () => {
               {!submitted ? (
                 <button
                   onClick={handleSubmit}
-                  className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary/90"
+                  disabled={submitting}
+                  className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Submit
+                  {submitting ? 'Submitting...' : 'Submit'}
                 </button>
               ) : (
                 <button

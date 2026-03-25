@@ -7,7 +7,7 @@ import useAuth from "../../hooks/useAuth";
 const baseLinks = [
 	{ to: "/", label: "Home" },
 	{ to: "/courses", label: "Cources" },
-	{ to: "/add-summary", label: "Quizes" },
+	{ to: "/quizzes", label: "Quizzes" },
 	{ to: "/materials", label: "Materials" },
 	{ to: "/community", label: "Community" },
 ];

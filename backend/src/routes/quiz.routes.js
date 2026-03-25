@@ -99,10 +99,117 @@ router.post('/from-summary', async (req, res) => {
 
     const questions = generateQuizQuestions(summary, 10);
 
+    if (!Array.isArray(questions) || questions.length !== 10) {
+      return res.status(500).json({ message: 'Quiz generation failed. Exactly 10 questions are required.' });
+    }
+
     const newQuiz = new Quiz({ summary, questions });
     const savedQuiz = await newQuiz.save();
 
     res.status(201).json(savedQuiz);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+
+// ================== ATTEMPT + EVALUATE (POST) ==================
+router.post('/:id/attempt', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Database is not connected.' });
+    }
+
+    const quiz = await Quiz.findById(req.params.id);
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found' });
+    }
+
+    if (!Array.isArray(quiz.questions) || quiz.questions.length !== 10) {
+      return res.status(400).json({ message: 'Quiz is invalid. Expected exactly 10 questions.' });
+    }
+
+    const submittedAnswers = Array.isArray(req.body.answers) ? req.body.answers : [];
+    if (submittedAnswers.length !== quiz.questions.length) {
+      return res.status(400).json({ message: 'Please submit answers for all 10 questions.' });
+    }
+
+    const submittedMap = new Map();
+    for (const answer of submittedAnswers) {
+      const questionNumber = Number(answer?.questionNumber);
+      const selectedAnswer = String(answer?.selectedAnswer || '').trim();
+
+      if (!Number.isInteger(questionNumber) || questionNumber < 1 || questionNumber > quiz.questions.length) {
+        return res.status(400).json({ message: 'Invalid question number in submitted answers.' });
+      }
+
+      submittedMap.set(questionNumber, selectedAnswer);
+    }
+
+    if (submittedMap.size !== quiz.questions.length) {
+      return res.status(400).json({ message: 'Please submit one answer per question.' });
+    }
+
+    const evaluatedQuestions = quiz.questions.map((question, index) => {
+      const questionNumber = index + 1;
+      const selectedAnswer = (submittedMap.get(questionNumber) || '').trim();
+      const correctAnswer = String(question.correctAnswer || '').trim();
+      const isCorrect = Boolean(selectedAnswer) && selectedAnswer === correctAnswer;
+
+      return {
+        questionText: question.questionText,
+        options: question.options,
+        correctAnswer,
+        selectedAnswer,
+        isCorrect
+      };
+    });
+
+    const correctAnswers = evaluatedQuestions.filter((q) => q.isCorrect).length;
+    const totalQuestions = quiz.questions.length;
+    const scorePercentage = Math.round((correctAnswers / totalQuestions) * 100);
+    const passed = scorePercentage >= 60;
+    const createdAt = new Date();
+
+    const attemptData = {
+      summary: quiz.summary,
+      questions: evaluatedQuestions,
+      totalQuestions,
+      correctAnswers,
+      scorePercentage,
+      passed,
+      certificateGenerated: passed,
+      createdAt
+    };
+
+    quiz.attempts.push(attemptData);
+    await quiz.save();
+
+    const certificate = passed
+      ? {
+          certificateId: `CERT-${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}${String(createdAt.getDate()).padStart(2, '0')}-${String(quiz._id).slice(-6).toUpperCase()}`,
+          issuedAt: createdAt,
+          quizTitle: 'Summary Quiz'
+        }
+      : null;
+
+    res.status(200).json({
+      attempt: {
+        correctAnswers,
+        totalQuestions,
+        scorePercentage,
+        passed,
+        createdAt
+      },
+      evaluation: evaluatedQuestions.map((question, index) => ({
+        questionNumber: index + 1,
+        questionText: question.questionText,
+        selectedAnswer: question.selectedAnswer,
+        correctAnswer: question.correctAnswer,
+        isCorrect: question.isCorrect
+      })),
+      certificate
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -152,7 +259,12 @@ router.get('/:id/questions', async (req, res) => {
     const quiz = await Quiz.findById(req.params.id).select('questions');
     if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
 
-    res.json({ name: 'Summary Quiz', questions: quiz.questions });
+    const safeQuestions = (quiz.questions || []).map((question) => ({
+      questionText: question.questionText,
+      options: (question.options || []).map((option) => ({ text: option.text }))
+    }));
+
+    res.json({ name: 'Summary Quiz', questions: safeQuestions });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -160,7 +272,7 @@ router.get('/:id/questions', async (req, res) => {
 
 
 // ================== UPDATE (PUT / PATCH) ==================
-// quiz update කරන්න (summary හෝ questions change කරන්න)
+
 router.put('/:id', async (req, res) => {
   try {
     const { summary, questions } = req.body;
