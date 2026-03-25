@@ -7,7 +7,9 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
+
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const app = express();
 const DEFAULT_PORT = Number(process.env.PORT) || 8070;
@@ -25,10 +27,15 @@ app.use(bodyParser.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB connection
-const URL = process.env.MONGODB_URL;
-mongoose.connect(URL).catch((error) => {
+const URL = process.env.MONGODB_URI || process.env.MONGODB_URL;
+
+if (!URL) {
+    console.error('MongoDB connection string missing. Set MONGODB_URI (or MONGODB_URL) in .env.');
+} else {
+    mongoose.connect(URL).catch((error) => {
     console.error('MongoDB initial connection failed:', error.message);
-});
+    });
+}
 
 const connection = mongoose.connection;
 connection.once('open', () => {
