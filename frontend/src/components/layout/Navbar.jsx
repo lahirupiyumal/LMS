@@ -7,10 +7,11 @@ import useAuth from "../../hooks/useAuth";
 const baseLinks = [
 	{ to: "/", label: "Home" },
 	{ to: "/courses", label: "Cources" },
-	{ to: "/quizzes", label: "Quizzes" },
+	{ to: "/add-summary", label: "Quizzes" },
 	{ to: "/materials", label: "Materials" },
 	{ to: "/community", label: "Community" },
 ];
+
 
 const Navbar = () => {
 	const [open, setOpen] = useState(false);
